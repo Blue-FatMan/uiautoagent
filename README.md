@@ -10,6 +10,7 @@ AI 驱动的 UI 自动化框架，支持视觉定位和自主任务执行。
 - 📱 Android / iOS 设备支持
 - 🔧 灵活的模型配置（支持不同场景使用不同模型）
 - 📊 可视化 HTML 报告（标注截图、token 消耗、耗时）
+- 📸 AI 图片内容提取（结构化 JSON 输出）
 - 🔍 启动时自动检查模型可用性
 - 🖼️ 操作前后截图对比（AI 可根据界面变化判断操作是否生效）
 
@@ -75,6 +76,12 @@ uv run uiautoagent -m ai -t "修改昵称为 kitty" -p ios
 
 # 提供任务上下文提高成功率
 uv run uiautoagent -m ai -t "修改昵称为 kitty" -cf knowledge.txt
+
+# 提取图片内容（结构化 JSON）
+uv run uiautoagent -m extract -i screenshot.png -q "提取所有商品价格"
+
+# 提取并指定输出格式
+uv run uiautoagent -m extract -i screenshot.png -q "提取商品信息" --example '{"name":"商品","price":0}'
 
 # 其他模式
 uv run uiautoagent -m find    # 查找并点击
@@ -152,6 +159,24 @@ result = run_ai_task(
 result = run_ai_task("查看有多少个好友")
 if result.success:
     print(f"好友数量: {result.result}")  # 例如: "有5个好友"
+```
+
+### 图片内容提取
+
+```python
+from uiautoagent import extract_content, ExtractionResult
+
+# 自由提取 - AI 决定 JSON 结构
+result = extract_content("screenshot.png", "提取所有价格信息")
+if result.success:
+    print(result.content)  # dict 或 list
+
+# 指定输出格式 - AI 按给定 JSON 格式输出
+result = extract_content(
+    "screenshot.png",
+    query="提取商品信息",
+    example={"name": "商品", "price": 0},
+)
 ```
 
 ### 元素检测
