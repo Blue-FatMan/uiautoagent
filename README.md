@@ -52,7 +52,6 @@ SESSION_ID=my-session-123   # 默认自动生成 UUID
 
 推荐的模型
 
-- gpt5.4
 - doubao-seed-2.0-pro
 - glm-5v-turbo
 
