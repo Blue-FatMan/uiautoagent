@@ -329,7 +329,7 @@ def execute_ai_task(
     system_prompt = get_system_prompt()
 
     for step in range(max_steps):
-        log.debug(f"AI决策中", step=step + 1, max_steps=max_steps)
+        log.debug("AI决策中", step=step + 1, max_steps=max_steps)
 
         # 准备数据
         screenshot_path = agent.get_current_screenshot()
@@ -478,7 +478,7 @@ def run_ai_task(
         model=info["model"],
         width=info["width"],
         height=info["height"],
-        task_dir=agent.task_dir,
+        report_dir=agent.report_dir,
     )
 
     log.info("任务", task=task, has_context=context is not None)

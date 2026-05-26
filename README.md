@@ -8,10 +8,10 @@ AI 驱动的 UI 自动化框架，支持视觉定位和自主任务执行。
 - 🤖 自主规划执行任务
 - 🧠 任务记忆学习
 - 📱 Android / iOS 设备支持
-- 🔧 灵活的模型配置（支持不同场景使用不同模型）
+- 🔧 灵活的模型配置（支持不同场景使用不同模型，并可按顺序回退）
 - 📊 可视化 HTML 报告（标注截图、token 消耗、耗时）
 - 📸 AI 图片内容提取（结构化 JSON 输出）
-- 🔍 启动时自动检查模型可用性
+- 🔍 启动时自动检查模型候选可用性
 - 🖼️ 操作前后截图对比（AI 可根据界面变化判断操作是否生效）
 
 ## 安装
@@ -30,17 +30,20 @@ cp .env.example .env
 # 基础配置（推荐使用 UIAUTO_ 前缀，旧版变量名仍然支持）
 UIAUTO_BASE_URL=--openai-compatable--
 UIAUTO_API_KEY=sk-xxx
-UIAUTO_MODEL_NAME=--suport-vision-model--
+UIAUTO_MODEL_NAME=doubao-seed-2.0-pro,glm-4.6v  # 默认候选模型，按顺序回退
 
 # 可选：为不同场景配置不同的模型
-UIAUTO_MODEL_VISION=         # 视觉模型（规划+检测，需要视觉能力）
-UIAUTO_MODEL_TEXT=           # 文本处理模型（总结、澄清等）
+UIAUTO_MODEL_VISION=doubao-seed-2.0-pro  # 视觉模型候选（规划+检测）
+UIAUTO_MODEL_TEXT=gpt-4o-mini,deepseek-chat          # 文本模型候选（总结、澄清等）
 
 # 代理配置（可选）
 UIAUTO_MODEL_PROXY=http://127.0.0.1:7890
 
 # 请求超时时间（秒）
 UIAUTO_REQUEST_TIMEOUT=60
+
+# 报告输出目录（可选）
+UIAUTO_REPORT_DIR=/path/to/reports   # 设置后直接写入此目录，不设则输出到 uiautoagent_reports/task_xxx/
 
 # OpenRouter 请求追踪（可选）
 OPENROUTER_SITE_URL=https://yoursite.com
@@ -49,20 +52,24 @@ SESSION_ID=my-session-123   # 默认自动生成 UUID
 ```
 
 > **注意**：环境变量已升级为 `UIAUTO_` 前缀以避免命名冲突。旧版变量名（如 `BASE_URL`、`API_KEY` 等）仍然支持，但推荐使用新的前缀版本。
+>
+> 模型环境变量支持使用逗号分隔多个候选模型，顺序就是回退顺序；当当前模型调用失败时，会自动尝试下一个候选模型。
 
-推荐的模型
+### 全部环境变量
 
-- doubao-seed-2.0-pro
-- glm-5v-turbo
-
-其他的欢迎补充
-
-### 场景说明
-
-| 场景 | 环境变量 | 说明 | 模型要求 |
-|------|----------|------|----------|
-| `VISION` | `UIAUTO_MODEL_VISION` | 视觉模型（规划+检测） | 需要视觉能力 |
-| `TEXT` | `UIAUTO_MODEL_TEXT` | 文本处理（总结、澄清、搜索） | 纯文本，无视觉要求 |
+| 变量名 | 旧版兼容 | 默认值 | 说明 |
+|--------|----------|--------|------|
+| `UIAUTO_BASE_URL` | `BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容 API 地址 |
+| `UIAUTO_API_KEY` | `API_KEY` | — | API 密钥 |
+| `UIAUTO_MODEL_NAME` | `MODEL_NAME` | `doubao-seed-2.0-pro` | 默认模型候选（逗号分隔，按顺序回退） |
+| `UIAUTO_MODEL_VISION` | `MODEL_VISION` | 同 `MODEL_NAME` | 视觉模型候选（规划+检测，需要视觉能力） |
+| `UIAUTO_MODEL_TEXT` | `MODEL_TEXT` | 同 `MODEL_NAME` | 文本模型候选（总结、澄清、搜索） |
+| `UIAUTO_MODEL_PROXY` | `MODEL_PROXY` | — | HTTP 代理（如 `http://127.0.0.1:7890`） |
+| `UIAUTO_REQUEST_TIMEOUT` | `REQUEST_TIMEOUT` | `60` | 请求超时（秒） |
+| `UIAUTO_REPORT_DIR` | — | — | 报告输出目录。设置后跳过 `task_xxx/` 子目录，直接写入此路径 |
+| `OPENROUTER_SITE_URL` | — | — | OpenRouter 站点 URL（请求追踪） |
+| `OPENROUTER_SITE_NAME` | — | — | OpenRouter 站点名称（请求追踪） |
+| `SESSION_ID` | — | 自动生成 UUID | 会话 ID，用于请求追踪 |
 
 ## 快速开始
 
@@ -102,17 +109,19 @@ uv run uiautoagent -m manual  # 手动控制
 - 应用 UI 比较复杂，需要提供元素位置提示
 - 任务需要特定领域的知识（如某个 App 的特殊操作方式）
 
-启动时会自动检查所有配置模型的可用性：
+启动时会自动检查所有配置模型候选的可用性，每个场景至少要有一个候选模型可用：
 
 ```
-🔍 检查模型可用性（共 2 个）...
-  ✅ 'gpt-5.4' [default, vision]
-  ✅ 'gpt-4o-mini' [text]
+🔍 检查模型可用性（共 4 个候选）...
+  ✅ 'glm-4.6v' [default #1]
+  ❌ 'doubao-seed-2.0-pro' [vision #1]
+  ✅ 'glm-5v-turbo' [vision #2]
+  ✅ 'gpt-4o-mini' [text #1]
 ```
 
 ## 任务报告
 
-每次任务执行完成后，会在 `uiautoagent_tasks/task_xxx/` 目录下生成：
+每次任务执行完成后，会在 `uiautoagent_reports/task_xxx/` 目录下生成：
 
 | 文件 | 说明 |
 |------|------|
@@ -229,6 +238,8 @@ response = chat_completion(
     max_tokens=500,
 )
 content = response.choices[0].message.content
+
+# 未显式传 model 时，会按该场景配置的候选模型顺序自动回退
 
 # 视觉场景（需要图片）
 vision_response = chat_completion(
