@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import dictlog
@@ -257,11 +258,17 @@ def main():
         help="直接传入任务上下文文本",
     )
     parser.add_argument(
-        "--log-level",
-        "-l",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        default="DEBUG",
-        help="日志级别（默认：DEBUG）",
+        "--timeout",
+        type=int,
+        default=None,
+        help="AI 请求超时时间（秒），默认读取 REQUEST_TIMEOUT 环境变量，无则 60",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="日志详细程度：0=INFO（默认），-v=DEBUG，-vv=TRACE",
     )
     parser.add_argument(
         "-i",
@@ -283,7 +290,16 @@ def main():
     args = parser.parse_args()
 
     log = slog.bind(mode=args.mode, task=args.task, platform=args.platform)
-    slog.level = getattr(dictlog, args.log_level)
+    if args.timeout is not None:
+        os.environ["REQUEST_TIMEOUT"] = str(args.timeout)
+    root_log = dictlog.get_logger()
+    verbose = args.verbose
+    if verbose == 0:
+        root_log.level = dictlog.INFO
+    elif verbose == 1:
+        root_log.level = dictlog.DEBUG
+    else:
+        root_log.level = dictlog.TRACE
 
     if not check_all_models_available():
         return
